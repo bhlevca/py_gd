@@ -1,0 +1,91 @@
+#building a python package wit native content
+
+
+cd /c/mecp/WebGnome/py_gd/py_gd
+pip wheel -w dist verbose ..
+pip install ..
+
+create MANIFEST.in
+-------------------------------------------
+include py_gd/py_gd.c                     
+include py_gd/py_gd.pxd
+
+include requirements*.txt
+include LICENSE.txt
+include README.rst
+include pyproject.toml
+
+recursive-include tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * *.so
+
+Don’t forget that even if you enlist them in your MANIFEST.in file, 
+they won’t be installed for you unless you set the include_package_data parameter
+of the setup function to True!
+
+
+create the pyproject.toml
+-----------------------------------------
+[build-system]
+requires = ["setuptools", "wheel", "cython"]
+build-backend = 'setuptools.build_meta'
+
+
+change the setup.py
+-----------------------------------------
+ext_modules = [Extension(name="py_gd.py_gd",
+                         sources=["py_gd/py_gd.pyx"],
+                         include_dirs=include_dirs,
+                         library_dirs=library_dirs,
+                         libraries=libraries,
+                         extra_compile_args=compile_args,
+                         extra_link_args=link_args,
+                         )]
+
+setup(name="py_gd",
+      version=get_version(),
+      description="python wrappers around libgd graphics lib",
+      # long_description=read('README'),
+      author="Christopher H. Barker",
+      author_email="chris.barker@noaa.gov",
+      url="https://github.com/NOAA-ORR-ERD/py_gd",
+      license="Public Domain",
+      keywords="graphics cython drawing",
+      cmdclass={'cleanall': cleanall},
+      ext_modules=cythonize(ext_modules),
+      zip_safe=False,  # dont want a compiled extension in a zipfile...
+      packages=['py_gd', 'py_gd.test'],
+=>    include_package_data=True,
+      python_requires='>=3.8',
+      classifiers=["Development Status :: 2 - Pre-Alpha",
+                   "Topic :: Utilities",
+                   "License :: Public Domain",
+                   "Intended Audience :: Developers",
+                   "Operating System :: OS Independent",
+                   "Programming Language :: Cython",
+                   "Programming Language :: Python :: 3 :: Only",
+                   "Programming Language :: Python :: Implementation :: CPython",
+                   "Topic :: Multimedia :: Graphics",
+                   ],
+      )
+
+in setup.py
+-------------------------------------------
+from Cython.Distutils import build_ext
+
+
+
+
+Compiling the cython code
+--------------------------------------------------------------------
+py_gd.pyx  
+
+
+$ commands
+python setup.py  build_ext --inplace
+python setup.py  cleanall
+pip uninstall py_gd
+pip install .
+
+

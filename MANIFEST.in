@@ -1,0 +1,8 @@
+graft py_gd docs
+include py_gd/py_gd.c                     
+include py_gd/py_gd.pxd
+include pyproject.toml
+include README.md
+include MANIFEST.in
+
+global-exclude *.py[co] __pycache__ *.so

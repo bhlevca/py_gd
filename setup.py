@@ -20,10 +20,15 @@ import os
 import glob
 import shutil
 
-from setuptools import setup, Extension
+from setuptools           import find_packages, setup
+#from setuptools           import Command
+from setuptools.extension import Extension
+
+#from setuptools import setup, Extension, find_packages
 from distutils.command.clean import clean
 
 from Cython.Build import cythonize
+#from Cython.Distutils import build_ext
 
 import numpy  # for the include dirs...
 
@@ -32,18 +37,32 @@ SETUP_PATH = os.path.dirname(os.path.abspath(__file__))
 
 include_dirs = [numpy.get_include()]
 library_dirs = []
-libraries = ['gd']
+libraries = ['gd', 'libgd']
 compile_args = []
 link_args = []
 
-if sys.platform.startswith('win'):
-    # need the library and include for Windows Anaconda... <PREFIX>/Library
-    include_dirs.append(os.path.join(sys.prefix, r'Library\include'))
-    # dlls go in bin, rather than lib (??)
-    library_dirs.append(os.path.join(sys.prefix, r'Library\lib'))
+# File extensions to be considered as data files. (Literal, no wildcards.)
+#dataexts  = (".py",  ".pyx", ".pxd",  ".c", ".cpp", ".h",  ".sh",  ".lyx", ".tex", ".txt", ".pdf")
 
-    compile_args.append('-EHsc')
+# Standard documentation to detect (and package if it exists).
+#standard_docs     = ["README", "LICENSE", "TODO", "CHANGELOG", "AUTHORS"]  # just the basename without file extension
+#standard_doc_exts = [".md", ".rst", ".txt", ""]  # commonly .md for GitHub projects, but other projects may use .rst or .txt (or even blank).
+
+if sys.platform.startswith('win'):
+    print(" >>**<< SYS.PREFIX:%s", sys.prefix)
+    # need the library and include for Windows Anaconda... <PREFIX>/Library
+    incpath = r'..\vcpkg\installed\x64-windows\include'
+    include_dirs.append(os.path.join(sys.prefix, r'Library\include'))
+    include_dirs.append(os.path.join(sys.prefix, incpath))
+    print(" >>**<< INCLUDE PATH: ", os.path.join(sys.prefix, incpath)) 
+    # dlls go in bin, rather than lib (??)
+    libpath = r'..\vcpkg\installed\x64-windows\lib'
+    library_dirs.append(os.path.join(sys.prefix, r'Library\lib'))
+    library_dirs.append(os.path.join(sys.prefix, libpath))
+       
+    compile_args.append('/EHsc')
     link_args.append('/MANIFEST')
+    #link_args.append('/WHOLEARCHIVE')
 elif sys.platform.startswith('linux'):
     library_dirs.append('/usr/local/lib')
     include_dirs.append('/usr/local/include')
@@ -99,19 +118,20 @@ class cleanall(clean):
 # It expects to find them in the "usual" locations
 #   or where conda puts it...
 
-ext_modules = [Extension("py_gd.py_gd",
-                         ["py_gd/py_gd.pyx"],
+ext_modules = [Extension(name="py_gd.py_gd",
+                         sources=["py_gd/py_gd.pyx"],
                          include_dirs=include_dirs,
                          library_dirs=library_dirs,
                          libraries=libraries,
                          extra_compile_args=compile_args,
                          extra_link_args=link_args,
                          )]
-
+ 
 ext_modules = cythonize(
                   ext_modules,
                   compiler_directives={'language_level': 3})
 
+ext_modules = cythonize("py_gd/py_gd.pyx")
 def get_version():
     """
     get version from __init__.py
@@ -123,21 +143,29 @@ def get_version():
                 version = line.split("=")[1].strip(' "')
                 return version
 
+with open("README.md", 'r') as f:
+    long_description = f.read()
 
 setup(name="py_gd",
       version=get_version(),
       description="python wrappers around libgd graphics lib",
-      # long_description=read('README'),
+      long_description=long_description,
       author="Christopher H. Barker",
       author_email="chris.barker@noaa.gov",
       url="https://github.com/NOAA-ORR-ERD/py_gd",
       license="Public Domain",
       keywords="graphics cython drawing",
       cmdclass={'cleanall': cleanall},
-      ext_modules=cythonize(ext_modules),
+      ext_modules=ext_modules,
       zip_safe=False,  # dont want a compiled extension in a zipfile...
       packages=['py_gd', 'py_gd.test'],
+      #packages=find_packages(),
+      include_dirs=[numpy.get_include()],
+      #package_data = {"" : ["*.pyx", "*.pxd", "*.c", "*.h"]},
+      #package_dir={'py_gd':  'py_gd'},
+      include_package_data=True,
       python_requires='>=3.8',
+      platforms=["Windows", "Linux"],
       classifiers=["Development Status :: 2 - Pre-Alpha",
                    "Topic :: Utilities",
                    "License :: Public Domain",

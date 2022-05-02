@@ -71,7 +71,7 @@ def main(argv):
     command = ('install_name_tool -change {} {} {}'
                .format('@rpath/./libgd.3.dylib', lib_path, py_gd_library))
 
-    print command
+    print(command)
 
     check_call(command, shell=True)
 

@@ -12,6 +12,39 @@ IF UNAME_SYSNAME == "Windows":
         ctypedef Py_UNICODE wchar_t
         FILE *_wfopen(const wchar_t *filename,const wchar_t *mode)
 
+
+
+"""
+Cython wrapper around the gd drawing lib
+
+Provides an OO interface -- at least to the limited functionality wrapped
+
+NOTE: pixel coordinates are defined as c ints -- if you pass in values
+      larger than a c int can take (usually ~ 2**31 - 1), it will overflow,
+      and who knows what you'll get.
+"""
+
+import cython
+from cython cimport view
+
+from py_gd cimport *
+
+from libc.stdio cimport FILE, fopen, fclose
+from libc.string cimport memcpy, strlen
+from libc.stdlib cimport malloc, free
+
+import os
+import sys
+import operator
+
+import numpy as np
+cimport numpy as cnp
+from py_gd.colors import colorschemes
+
+
+
+
+#-------------------------------------------------------------------------------
 ## access the gd header files:
 cdef extern from "gd.h":
 
@@ -123,6 +156,35 @@ cdef extern from "gdfontg.h":
 #cdef int gdPie = gdArc
 
 
+cpdef cnp.ndarray[int, ndim=2, mode='c'] asn2array(obj, dtype)
+
+cdef FILE* open_file(file_path) except *
+
+cdef class Image:
+    """
+    class wrapper  around a gdImage object
+    """
+    # cdef readonly unsigned int _width, _height
+
+    cdef gdImagePtr _image
+    cdef unsigned char * _buffer_array
+
+    cdef list color_names
+    cdef list color_rgb
+    cdef dict colors
+
+    
+
+cdef class Animation:
+    cdef Image cur_frame
+    cdef int _cur_delay
+    cdef Image prev_frame
+    cdef int base_delay
+    cdef FILE *_fp
+    cdef int _has_begun
+    cdef int _has_closed
+    cdef int _frames_written
+    cdef object _file_path
 
 
 
