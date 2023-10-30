@@ -5,9 +5,9 @@ unit tests for the py_gd project
 designed to be run with pytest:
 
 py.test test_gd.py
+
 """
 
-import os
 import sys
 import hashlib
 from pathlib import Path
@@ -15,7 +15,8 @@ import numpy as np
 
 import pytest
 
-from py_gd import Image, Animation, asn2array, from_array
+from py_gd import Image, Animation, asn2array, from_array  # noqa: F821
+
 
 HERE = Path(__file__).parent
 
@@ -37,45 +38,76 @@ def check_file(name):
     # rebuild with the build_checksums.py script
     # you may need to do that with a new libjpeg version, for instance
     #  it would be nice if all images were checked, but only a few are now...
-    checksums = {'image_clip.bmp': '6adb4af2332bedec46815f86ac462b9f',
-                 'image_copy.bmp': 'a0e7ffb4ecada86965fcfc60a032cad4',
-                 'image_copy_middle1.bmp': '0ac48cdf5e2652999a33efa6c558a9b7',
-                 'image_copy_middle2.bmp': '09be326e5940e58dfdfa492e03d7e818',
-                 'image_copy_trans.png': '8939012bbd494ec19c8afa639eedafb8',
-                 'image_copy_upper_left.bmp': '24f96fb535350df3cdcdc25bcb95a25a',
-                 'test_animation.gif': '4639911d250a50f9a76a24bb23031921',
-                 'test_image_arc.bmp': 'beadbe2b82054c0ff2394ea27f26ba69',
-                 'test_image_array1.bmp': 'e268130b61eaecdc9d809b771909f7b6',
-                 'test_image_array2.bmp': 'e268130b61eaecdc9d809b771909f7b6',
-                 'test_image_clear_after.png': 'b6825be7e699ea19bd2571c3b4864dac',
-                 'test_image_clear_after2.png': '30bc477928a84571e60925fd61013a94',
-                 'test_image_clear_before.png': 'd34a1e3576b2732321f32c4ee1117730',
-                 'test_image_clear_before2.png': 'd34a1e3576b2732321f32c4ee1117730',
-                 'test_image_dot.png': '86cac4acb5ff8e94e57b49fa26f2a19f',
-                 'test_image_dots_large.png': '65bc6d7ac25a6f6902e6db6d5ee211b3',
-                 'test_image_dots_lots.png': '18af607870b14a30a00b964e560426c5',
-                 'test_image_grey.bmp': '46f3b8773ac4d552944a2eb378ba27e8',
-                 'test_image_line.bmp': 'd279707389a3bac62c4413839919b962',
-                 'test_image_line_clip.bmp': 'fe6e5505f60428d47a64124cbb86c68d',
-                 'test_image_pixel.bmp': '1bf9f74b1122d8b3cc4a955c7216feb7',
-                 'test_image_points.png': 'd16cb5b8b309f570940db8c17bccd9a1',
-                 'test_image_points3.png': '995843c5ffbc027b7b1ed7bbc9ffa7c2',
-                 'test_image_poly1.bmp': 'd4654eb592716d5fe73c0661b39b39a7',
-                 'test_image_poly2.bmp': '066f46e0363d1c04b002ea1d6716a07f',
-                 'test_image_poly3.bmp': '4fa4411acb4aee16a1c6a2e15df44cc5',
-                 'test_image_polygon_clip.bmp': 'fb8037129941fd6c9e2686f0c109496b',
-                 'test_image_polyline.bmp': '01d7d25972d69796af9fefc67a1e17af',
-                 'test_image_rectangle.bmp': '725e1bd5723064b4569455caf518f77a',
-                 'test_image_save.bmp': '1facb71e1f6d0e21abfb8b07ae900a49',
-                 'test_image_save.gif': '50f1d8d494edba646813b7e7ab830e64',
-                 'test_image_save.jpg': 'c9c5f23c1eb103e062c33e52e758827f',
-                 'test_image_save.png': '3067832d58ce76285b7e32d3f42e2659',
-                 'test_image_text.bmp': 'a7b1fe64f4da978706d857c39ce5c026',
-                 'test_image_x_large.png': 'e57caa7c4304f3806eb3f327ff717076',
-                 'test_image_x_lots.png': '57aa5a9a060f98083c023f70dfe35c29',
-                 'test_text_align.bmp': '3151fe59ab1177fe6fde144dedae1082',
-                 'test_text_background.bmp': 'da827b0d1bba63eba680d7328153c82d'}
-
+    checksums = {
+        'image_clip.bmp': '6adb4af2332bedec46815f86ac462b9f',
+        'image_copy.bmp': 'a0e7ffb4ecada86965fcfc60a032cad4',
+        'image_copy_middle1.bmp': '0ac48cdf5e2652999a33efa6c558a9b7',
+        'image_copy_middle2.bmp': '09be326e5940e58dfdfa492e03d7e818',
+        'image_copy_trans.png': '8939012bbd494ec19c8afa639eedafb8',
+        'image_copy_upper_left.bmp': '24f96fb535350df3cdcdc25bcb95a25a',
+        'nothing.gif': 'fa2e02f338a8ab98c5c1f3cd280ca505',
+        'one_frame_delete.gif': '35d46c172f95bf79fa66eb0c4f114ada',
+        'sample_BW.png': 'a211aaa9093b345bc2c7944aaef76899',
+        'sample_cividis.png': '5b6af4aa252d0a84969dfe93cdb489ae',
+        'sample_css4.png': '43ffd2b528e067c37e46fed685bc6297',
+        'sample_inferno.png': '850806ac80c706bf510d38443d3b145a',
+        'sample_magma.png': '0ebdc1856554e2ed441cf94883a59bf9',
+        'sample_plasma.png': 'd1e954be4f07b5b4b2bd712022525425',
+        'sample_tableau.png': 'b64d48d10529655065a78149c2e16529',
+        'sample_transparent.png': 'a60406f4c35294111ab6a1eda9eeb63a',
+        'sample_turbo.png': 'c19b0b0c474ba425c3f5015a086aa8c8',
+        'sample_twilight.png': 'ef008e3ca66132b49e7ff11d96ac0ba7',
+        'sample_viridis.png': '8fe4956a7c00136e132ade927b433982',
+        'sample_web.png': '5d5a8f1de03282ea675cf591eb32b815',
+        'sample_xkcd.png': '83dd36fb952930d99ac4e68f23045906',
+        'test_animation.gif': '3abc5d1963116b1a05701978b048ac8a',
+        'test_animation_reset1.gif': 'a53e5aaebcf441f002927b913c12f213',
+        'test_animation_reset2.gif': 'ec5961189acd876f73f8132707f13c82',
+        'test_animation_reset_same.gif': 'ec5961189acd876f73f8132707f13c82',
+        'test_animation_reuse.gif': 'a45117a3d17f1093d5e395fcc20e69e1',
+        'test_animation_reuse_not_close.gif':
+        '7587576ac36cd0e2e8bcd8ee4ff52b82',
+        'test_animation_static.gif': '4639911d250a50f9a76a24bb23031921',
+        'test_draw_dots_multi_color_indices.png':
+        '415db687d254a58eb6d4cabc4be22ea8',
+        'test_draw_dots_multi_named_colors.png':
+        'ca7a67f726517e341b55366a7b08b48e',
+        'test_image_arc.bmp': 'c0a3c29d49922cac32e4a6fae5c9ac4e',
+        'test_image_array1.bmp': 'e268130b61eaecdc9d809b771909f7b6',
+        'test_image_array2.bmp': 'e268130b61eaecdc9d809b771909f7b6',
+        'test_image_circle.bmp': 'bc3e62938f64c5c084d176b99e7e156a',
+        'test_image_clear_after.png': 'b6825be7e699ea19bd2571c3b4864dac',
+        'test_image_clear_after2.png': '30bc477928a84571e60925fd61013a94',
+        'test_image_clear_before.png': 'd34a1e3576b2732321f32c4ee1117730',
+        'test_image_clear_before2.png': 'd34a1e3576b2732321f32c4ee1117730',
+        'test_image_dot.png': '275c79433ded774c5cfebaf45fc8c9fb',
+        'test_image_dots_large.png': '0a49a24272e0e3bfba82fcdc21d3cb73',
+        'test_image_dots_lots.png': '85b073f3d7d1d2d0797f8ac3b107a718',
+        'test_image_ellipse.bmp': '543ec0befeb67d131f4df23eeb21e590',
+        'test_image_grey.bmp': '46f3b8773ac4d552944a2eb378ba27e8',
+        'test_image_line.bmp': 'd279707389a3bac62c4413839919b962',
+        'test_image_line_clip.bmp': 'fe6e5505f60428d47a64124cbb86c68d',
+        'test_image_pixel.bmp': '1bf9f74b1122d8b3cc4a955c7216feb7',
+        'test_image_points.png': 'd16cb5b8b309f570940db8c17bccd9a1',
+        'test_image_points3.png': 'fbbd89301eb5de8e7785da095c3c2b51',
+        'test_image_poly1.bmp': 'd4654eb592716d5fe73c0661b39b39a7',
+        'test_image_poly2.bmp': '066f46e0363d1c04b002ea1d6716a07f',
+        'test_image_poly3.bmp': '4fa4411acb4aee16a1c6a2e15df44cc5',
+        'test_image_polygon_clip.bmp': 'fb8037129941fd6c9e2686f0c109496b',
+        'test_image_polyline.bmp': '01d7d25972d69796af9fefc67a1e17af',
+        'test_image_rectangle.bmp': 'f0eff1deadc678b78e26bd1a4cd88810',
+        'test_image_save.bmp': '1facb71e1f6d0e21abfb8b07ae900a49',
+        'test_image_save.gif': '50f1d8d494edba646813b7e7ab830e64',
+        'test_image_save.jpg': 'e6d5a45b093988240cbe3d0365c0675a',
+        'test_image_save.png': '3067832d58ce76285b7e32d3f42e2659',
+        'test_image_text.bmp': 'a7b1fe64f4da978706d857c39ce5c026',
+        'test_image_with_colorramp.png': 'b73b81b6badde809753f801d96b1b0dd',
+        'test_image_x_large.png': 'e57caa7c4304f3806eb3f327ff717076',
+        'test_image_x_lots.png': '4c3c223185c407c8ead2afbf28244ebe',
+        'test_text_align.bmp': '3151fe59ab1177fe6fde144dedae1082',
+        'test_text_background.bmp': 'da827b0d1bba63eba680d7328153c82d',
+        'test_spline_1.png': '40c722b313fd0722b5a99585af409329',
+        }
     cs = hashlib.md5(open(outfile(name), 'rb').read()).hexdigest()
     if checksums[name] == cs:
         return True
@@ -108,10 +140,10 @@ def test_asn2array_fail():
     check if it fails when wrong imput is used
     """
     with pytest.raises(ValueError):
-        _arr = asn2array([(1, 2, 3), (3, 4, 5), (5, 6, 7)], dtype=np.intc)
+        _arr = asn2array([(1, 2, 3), (3, 4, 5), (5, 6, 7)], dtype=np.intc)  # noqa: F841
 
     with pytest.raises(ValueError):
-        _arr = asn2array((1, 2, 3, 3, 4, 5, 5, 6, 7), dtype=np.intc)
+        _arr = asn2array((1, 2, 3, 3, 4, 5, 5, 6, 7), dtype=np.intc)  # noqa: F841
 
     assert True
 
@@ -165,17 +197,22 @@ def test_init_default_colors():
     """
     Initialize with the default palette
     """
-    _img = Image(width=400, height=300)
+    img = Image(width=400, height=300)
+
+    colors = img.get_color_names()
+    assert len(colors) == 17
 
 
 def test_init_BW():
-    _img = Image(10, 10, preset_colors='BW')
+    img = Image(10, 10, preset_colors='BW')
+    colors = img.get_color_names()
+    assert len(colors) == 3
 
 
 def test_init2():
     _img = Image(width=400, height=400)
 
-    _img = Image(400, 400)
+    _img = Image(400, 400)  # noqa: F841
 
     # need to pass in width and height
     with pytest.raises(TypeError):
@@ -198,7 +235,8 @@ def test_mem_limit():
     _img = Image(32768, 32768)  # 1 GB image
 
     with pytest.raises(MemoryError):
-        _img = Image(32768, 32769)  # > 1 GB image
+        # > 1 GB image
+        _img = Image(32768, 32769)    # noqa: F841
 
 
 def test_set_size():
@@ -215,10 +253,10 @@ def test_set_size():
         img.size = (50, 60)
 
     with pytest.raises(AttributeError):
-            img.height = 100
+        img.height = 100
 
     with pytest.raises(AttributeError):
-            img.width = 100
+        img.width = 100
 
 
 def test_info():
@@ -226,6 +264,14 @@ def test_info():
 
     assert str(img) == "py_gd.Image: width: 400, height: 300"
     assert repr(img) == "Image(width=400, height=300)"
+
+
+def test_get_color_indices():
+    img = Image(10, 10, preset_colors='xkcd')
+
+    colors = img.get_color_indices(['white', 'lavender', 'aquamarine'])
+
+    assert np.array_equal(colors, np.array([1, 22, 54], dtype=np.uint8))
 
 
 def test_add_colors():
@@ -285,7 +331,7 @@ def test_save_image(filetype):
     fname = "test_image_save." + filetype
     img.save(outfile(fname), filetype)
 
-    if filetype != "jpg":  # jpeg is lossy and thus inconsistent
+    if filetype != "jpg":  # jpeg is lossy and thus can be inconsistent
         assert check_file(fname)
 
     with pytest.raises(ValueError):
@@ -444,6 +490,8 @@ def test_polyline():
 
 def test_rectangles():
     img = Image(100, 200)
+#    print(img.get_color_names())
+    img.clear('gray')
 
     img.draw_rectangle((10, 10), (30, 40), fill_color='blue')
     img.draw_rectangle((20, 50), (40, 70), line_color='blue', line_width=5)
@@ -455,7 +503,7 @@ def test_rectangles():
 
 def test_arc():
     img = Image(400, 600)
-
+    img.clear('gray')
     # possible flags:  "Arc", "Pie", "Chord", "NoFill", "Edged"
     # (Arc and Pie are the same)
     center = (200, 150)
@@ -497,6 +545,85 @@ def test_arc():
         img.draw_arc(center, 380, 280, start=30, end=90, line_color='white',
                      style='fred')
 
+    assert check_file("test_image_arc.bmp")
+
+
+def test_circle():
+    img = Image(400, 400, preset_colors='web')
+    img.clear('white')
+
+    # just the outline: upper left
+    center = (100, 100)
+    img.draw_circle(center, diameter=100, line_color='black', line_width=2)
+
+    # just the fill: lower left
+    center = (100, 300)
+    img.draw_circle(center, diameter=100, fill_color='teal')
+
+    # fill and outline: Upper right
+    center = (300, 100)
+    img.draw_circle(center,
+                    diameter=100,
+                    fill_color='red',
+                    line_color='green',
+                    line_width=4)
+
+    # fat outline: Lower right
+    center = (300, 300)
+    img.draw_circle(center,
+                    diameter=150,
+                    line_color='green',
+                    line_width=8)
+
+    img.save(outfile("test_image_circle.bmp"))
+
+    assert check_file("test_image_circle.bmp")
+
+
+def test_ellipse():
+    img = Image(400, 400, preset_colors='web')
+    img.clear('white')
+
+    # just the outline: upper left
+    center = (100, 100)
+    w, h = 120, 60
+    img.draw_ellipse(center,
+                     width=w,
+                     height=h,
+                     line_color='black',
+                     line_width=2)
+
+    # just the fill: lower left
+    center = (100, 300)
+    w, h = 60, 120
+    img.draw_ellipse(center,
+                     width=w,
+                     height=h,
+                     fill_color='teal')
+
+    # fill and outline: Upper right
+    center = (300, 100)
+    w, h = 60, 80
+    img.draw_ellipse(center,
+                     width=w,
+                     height=h,
+                     fill_color='red',
+                     line_color='green',
+                     line_width=4)
+
+    # fat outline: Lower right
+    center = (300, 300)
+    w, h = 80, 60
+    img.draw_ellipse(center,
+                     width=w,
+                     height=h,
+                     line_color='green',
+                     line_width=8)
+
+    img.save(outfile("test_image_ellipse.bmp"))
+
+    assert check_file("test_image_ellipse.bmp")
+
 
 def test_text():
     img = Image(200, 200)
@@ -508,6 +635,8 @@ def test_text():
     img.draw_text("Some Giant Text", (20, 100), font="giant", color='white')
 
     img.save(outfile("test_image_text.bmp"), "bmp")
+
+    assert check_file("test_image_text.bmp")
 
 
 def test_text_align():
@@ -555,16 +684,20 @@ def test_text_background():
 def test_draw_dot():
     img = Image(100, 100,)
 
+    img.clear('white')
+
     img.draw_dot((10, 10))
     img.draw_dot((20, 20), diameter=2, color='black')
     img.draw_dot((30, 30), diameter=3, color='red')
-    img.draw_dot((40, 0), diameter=4, color='blue')
+    img.draw_dot((40, 40), diameter=4, color='blue')
     img.draw_dot((50, 50), diameter=6, color='aqua')
     img.draw_dot((60, 60), diameter=8, color='lime')
     img.draw_dot((70, 70), diameter=10, color='fuchsia')
     img.draw_dot((80, 80), diameter=15, color='purple')
 
+
     img.save(outfile("test_image_dot.png"), "png")
+    assert check_file("test_image_dot.png")
 
 
 def test_draw_dots():
@@ -662,6 +795,44 @@ def test_draw_dots_lots():
     img.draw_dots(points, diameter=2, color='red')
 
     img.save(outfile("test_image_dots_lots.png"), 'png')
+
+
+def test_draw_dots_multi_named_colors():
+    """
+    test drawing a lot of dots
+    """
+    w, h, = 500, 500
+    img = Image(w, h, preset_colors='xkcd')
+
+    points = [(x, y) for x in range(0, w, 50) for y in range(0, h, 50)]
+
+    # print(points)
+    colors = [img.get_color_names()[i+1] for i in range(len(points))]
+
+    # colors =
+    img.draw_dots(points, diameter=10, color=colors)
+
+    img.save(outfile("test_draw_dots_multi_named_colors.png"), 'png')
+
+    assert check_file("test_draw_dots_multi_named_colors.png")
+
+
+def test_draw_dots_multi_color_indices():
+    """
+    test drawing a lot of dots
+    """
+    w, h, = 500, 500
+    img = Image(w, h, preset_colors='xkcd')
+
+    points = [(x, y) for x in range(0, w, 25) for y in range(0, h, 25)]
+
+    colors = [i % 255 for i in range(len(points))]
+
+    img.draw_dots(points, diameter=10, color=colors)
+
+    img.save(outfile("test_draw_dots_multi_color_indices.png"), 'png')
+
+    assert check_file("test_draw_dots_multi_color_indices.png")
 
 
 def test_draw_dots_wrong_shape():
@@ -764,7 +935,7 @@ def test_colors():
     img.get_color_index(255)
 
     # will round floating point numbers
-    # shoul dthi sbe changed?
+    # should this be changed?
     assert img.get_color_index(2.3) == 2
 
     with pytest.raises(ValueError):
@@ -775,8 +946,8 @@ def test_colors():
         # error if color is not in dict
         img.get_color_index('something else')
 
-    with pytest.raises(ValueError):
-        # error if color is not anumber
+    with pytest.raises(TypeError):
+        # error if color is not a number
         img.get_color_index((1, 2, 3))
 
     with pytest.raises(TypeError):
@@ -833,7 +1004,7 @@ def test_array_set():
 
     img.save(outfile('test_image_array1.bmp'))
 
-    print(img.get_color_names())
+    # print(img.get_color_names())
 
     for i in range(4):
         for j in range(3):
@@ -1040,6 +1211,7 @@ def test_animation():
     print(f"{anim.frames_written} frames were written")
     assert anim.frames_written == 22
 
+
 def test_static_animation():
     """
     If subsequent frames are identical, then it should add tot he delay,
@@ -1221,10 +1393,3 @@ def test_animation_delete_one_frame():
     del anim
 
     assert filename.exists()
-
-
-
-
-
-
-

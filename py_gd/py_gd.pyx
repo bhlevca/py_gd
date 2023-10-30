@@ -49,10 +49,12 @@ cpdef cnp.ndarray[int, ndim=2, mode='c'] asn2array(obj, dtype):
 
     :param dtype: the numpy data type you want the returned array to be
     """
-    arr = np.asarray(obj, dtype)
+    arr = np.asarray(obj)
 
     if arr.ndim != 2 or arr.shape[1] != 2:
         raise ValueError("input  must be convertible to a Nx2 array")
+
+    arr = arr.astype(dtype)
 
     return arr
 
@@ -84,6 +86,35 @@ cdef FILE* open_file(file_path) except *:
     return fp
 
 
+cdef draw_single_dot(gdImagePtr image,
+                     int x,
+                     int y,
+                     int diameter,
+                     cnp.uint8_t c):
+
+    if diameter == 1:
+        gdImageSetPixel(image, x, y, c)
+    elif diameter == 2:  # draw four pixels
+        gdImageSetPixel(image, x,     y, c)
+        gdImageSetPixel(image, x + 1, y, c)
+        gdImageSetPixel(image, x,     y + 1, c)
+        gdImageSetPixel(image, x + 1, y + 1, c)
+    elif diameter == 3:  # draw five pixels (should be 7)
+        gdImageSetPixel(image, x, y - 1, c)
+        gdImageSetPixel(image, x, y,     c)
+        gdImageSetPixel(image, x, y + 1, c)
+        gdImageSetPixel(image, x - 1, y, c)
+        gdImageSetPixel(image, x + 1, y, c)
+    elif diameter > 3:
+        gdImageFilledArc(image,
+                         x, y,
+                         diameter, diameter,
+                         0, 360,
+                         c, gdArc)
+    else:
+        raise NotImplementedError("only diameters >= 1 are supported.")
+
+
 cdef class Image:
     """
     class wrapper  around a gdImage object
@@ -92,9 +123,8 @@ cdef class Image:
 
     #cdef gdImagePtr _image
     #cdef unsigned char * _buffer_array
-
     #cdef list color_names
-    #cdef list color_rgb
+    #cdef dict colors_rgb
     #cdef dict colors
 
     def __cinit__(self, int width, int height, preset_colors='web'):
@@ -133,34 +163,38 @@ cdef class Image:
         :param height: height of image in pixels
         :type height: integer
 
-        :param preset_colors=web_colors: which set of preset colors you want.
-                                         options are:
+        :param preset_colors=web: which set of preset colors you want.
+                                     options are:
 
-                                         'web' - the basic named colors for
-                                                 the web: transparent
-                                                 background
+                                     'web' - the basic named colors for
+                                             the web: transparent
+                                             background
 
-                                         'BW' - transparent, black, and white:
-                                                transparent background
+                                     'BW' - transparent, black, and white:
+                                            transparent background
 
-                                         'transparent' - transparent background,
-                                                         no other colors set
+                                     'transparent' - transparent background,
+                                                     no other colors set
 
-                                         None - no pre-allocated colors -- the
-                                                first one you allocate will be
-                                                the background color or any of
-                                                the colors in py_gd.colors
+                                     Any other of the colorschemes in:
+                                     `py_gd.colors.colorschemes.keys()`
+
+                                     None - no pre-allocated colors -- the
+                                            first one you allocate will be
+                                            the background color or any of
+                                            the colors in py_gd.colors
 
         :type preset_colors: string or None
 
         The Image is created as a 8-bit Paletted Image.
 
         """
-        # NOTE: the initilization of the C structs is happening in the __cinit__
+        # NOTE: the initialization of the C structs is happening in the __cinit__
 
         # set first color (background) to transparent
         # initialize the colors
         self.colors = {}
+        self.colors_rgb = {}
         self.color_names = []
 
         if preset_colors is not None:
@@ -190,13 +224,22 @@ cdef class Image:
 
     property size:
         def __get__(self):
+            """
+            The size of the image as a (width, height) tuple
+            """
             return (gdImageSX(self._image), gdImageSY(self._image))
 
     property width:
         def __get__(self):
+            """
+            The width of the image in pixels
+            """
             return gdImageSX(self._image)
 
     property height:
+        """
+        The height of the image in pixels
+        """
         def __get__(self):
             return gdImageSY(self._image)
 
@@ -266,6 +309,7 @@ cdef class Image:
             raise ValueError('there are no more colors available to allocate')
 
         self.colors[name] = color_index
+        self.colors_rgb[name] = color
         self.color_names.append(name)
 
         return color_index
@@ -479,6 +523,12 @@ cdef class Image:
 
         return None
 
+    def get_colors(self):
+        """
+        :returns color_names: a list of all color names and RGB values
+        """
+        return self.colors_rgb
+
     def get_color_names(self):
         """
         :returns color_names: a list of all color names in use
@@ -487,7 +537,11 @@ cdef class Image:
 
     def get_color_index(self, color):
         """
-        returns the color index for a named or integer color
+        Returns the color index for a named color or index
+
+        If passed and index, the index is returned.
+
+        Usually used internally for drawing.
         """
         cdef int c = 0
 
@@ -495,14 +549,42 @@ cdef class Image:
             c = self.colors[color]
         except KeyError:
             try:
-                if 0 <= color <= 255:
-                    c = color
-                else:
-                    raise ValueError('you must provide an integer between 0 and 255')
-            except TypeError:  # not an int
-                raise ValueError('you must provide an existing named color '
-                                 )
+                color = int(color)
+            except ValueError:
+                raise ValueError('you must provide an existing named color or integer color index')
+            if 0 <= color <= 255:
+                c = color
+            else:
+                raise ValueError('you must provide an integer between 0 and 255')
         return c
+
+    def get_color_indices(self, colors):
+        """
+        returns a numpy array color indices: one element for each color in colors
+
+        :param colors: Sequence of color names or indexes
+
+        if colors is an numpy ndarray of dtype uint8, this will be a pass-through.
+        """
+        # cdef cnp.uint8_t c
+        cdef cnp.uint32_t i
+        cdef cnp.ndarray[cnp.uint8_t, ndim=1, mode='c'] color_inds
+        color_inds = np.zeros(len(colors), dtype=np.uint8)
+
+        for i in range(len(colors)):
+            color = colors[i]
+            try:
+                color_inds[i] = self.colors[color]
+            except KeyError:
+                try:
+                    if 0 <= color <= 255:
+                        color_inds[i] = color
+                    else:
+                        raise ValueError('you must provide an integer between 0 and 255')
+                except TypeError:  # not an int
+                    raise ValueError('you must provide an existing named color')
+        return color_inds
+
 
     def get_pixel_color(self, point):
         """
@@ -528,10 +610,9 @@ cdef class Image:
 
     def set_pixel_value(self, point, value):
         """
-        returns the value (index into palette) of the pixel at a point
+        sets the value of a pixel (index into palette).
 
-        :param point: the (x,y) coord you want the value of
-
+        :param point: the (x, y) coord of the pixel to set.
         """
         gdImageSetPixel(self._image, point[0], point[1], value)
 
@@ -547,6 +628,7 @@ cdef class Image:
                         point[0], point[1],
                         self.get_color_index(color))
 
+
     def draw_dot(self, point, color='black', int diameter=1):
         """
         draw a dot (filled circle) at the point:(x,y)
@@ -557,34 +639,26 @@ cdef class Image:
         :param color='black': color to draw the dot
         :type color: string colorname of color index
 
-        :param diameter=1: diamter of the dot
+        :param diameter=1: diameter of the dot
         :type diameter: integer
         """
+        if diameter < 1:
+            raise NotImplementedError("only diameters >= 1 are supported.")
+
         cdef cnp.uint8_t c
+
+        cdef int x = point[0]
+        cdef int y = point[1]
 
         c = self.get_color_index(color)
 
-        if diameter == 1:
-            gdImageSetPixel(self._image, point[0], point[1], c)
-        elif diameter == 2:  # draw four pixels
-            gdImageSetPixel(self._image, point[0],     point[1], c)
-            gdImageSetPixel(self._image, point[0] + 1, point[1], c)
-            gdImageSetPixel(self._image, point[0],     point[1] + 1, c)
-            gdImageSetPixel(self._image, point[0] + 1, point[1] + 1, c)
-        elif diameter > 2:
-            gdImageFilledArc(self._image,
-                             point[0], point[1],
-                             diameter, diameter,
-                             0, 360,
-                             c, gdArc)
-        else:
-            raise NotImplementedError("only diameters >= 1 are supported.")
+        draw_single_dot(self._image, x, y, diameter, c)
 
     def draw_dots(self, points, color='black', int diameter=1):
         """
         Draws a set of individual dots all in the same color
 
-        :param points: the (x,y) coordianates of the center of the dots
+        :param points: the (x,y) coordinates of the center of the dots
         :type points: a Nx2 numpy array of integers, or something that can be
                       turned in to one
 
@@ -597,47 +671,37 @@ cdef class Image:
         cdef cnp.uint8_t c
         cdef cnp.uint32_t i, n
         cdef cnp.ndarray[int, ndim=2, mode='c'] points_arr
+        cdef cnp.ndarray[cnp.uint8_t, ndim=1, mode='c'] colors
+
+        if diameter < 1:
+            raise NotImplementedError("only diameters >= 1 are supported.")
 
         points_arr = asn2array(points, dtype=np.intc)
         n = points_arr.shape[0]
 
-        c = self.get_color_index(color)
+        if isinstance(color, (str, int)):  # it is a single color
+            colors = np.zeros((points_arr.shape[0],), dtype=np.uint8)
+            colors[:] = self.get_color_index(color)
+        else:  # a sequence of colors:
+            if len(color) != len(points):
+                raise ValueError("number of colors must match number of points, "
+                                 "or be only one color")
+            try:
+                colors = np.asarray(color, dtype=np.uint8)
+            except ValueError:  # it's not integers
+                colors = self.get_color_indices(color)
 
-        if diameter == 1:
-            for i in range(n):
-                gdImageSetPixel(self._image,
-                                points_arr[i, 0], points_arr[i, 1],
-                                c)
-        elif diameter == 2:  # draw four pixels
-            for i in range(n):
-                gdImageSetPixel(self._image,
-                                points_arr[i, 0], points_arr[i, 1],
-                                c)
-                gdImageSetPixel(self._image,
-                                points_arr[i, 0]+1, points_arr[i, 1],
-                                c)
-                gdImageSetPixel(self._image,
-                                points_arr[i, 0], points_arr[i, 1]+1,
-                                c)
-                gdImageSetPixel(self._image,
-                                points_arr[i, 0]+1, points_arr[i, 1]+1,
-                                c)
-        elif diameter > 2:
-            for i in range(n):
-                gdImageFilledArc(self._image,
-                                 points_arr[i, 0], points_arr[i, 1],
-                                 diameter, diameter,
-                                 0, 360,
-                                 c, gdArc)
-        else:
-            raise NotImplementedError("only diameters >= 1 are supported.")
+        for i in range(n):
+            c = colors[i]
+            draw_single_dot(self._image, points_arr[i, 0], points_arr[i, 1], diameter, c)
+
 
     def draw_xes(self, points, color='black',
                  int diameter=2, int line_width=1):
         """
         Draws a set of individual Xs all in the same color
 
-        :param points: the (x,y) coordianates of the center of the dots
+        :param points: the (x,y) coordinates of the center of the dots
         :type points: a Nx2 numpy array of integers, or something that can be
                       turned in to one
 
@@ -654,29 +718,34 @@ cdef class Image:
         cdef cnp.uint8_t c
         cdef cnp.uint32_t i, n
         cdef cnp.ndarray[int, ndim=2, mode='c'] points_arr
+        cdef cnp.ndarray[cnp.uint8_t, ndim=1, mode='c'] colors
 
         points_arr = asn2array(points, dtype=np.intc)
         n = points_arr.shape[0]
 
-        c = self.get_color_index(color)
+        if isinstance(color, (str, int)) or len(color) == 1:
+            colors = np.zeros((points_arr.shape[0],), dtype=np.uint8)
+            colors[:] = self.get_color_index(color)
+        else:
+            colors = self.get_color_indices(color)
 
         if diameter == 2:  # draw five pixels
             for i in range(n):
                 gdImageSetPixel(self._image,
                                 points_arr[i, 0], points_arr[i, 1],
-                                c)
+                                colors[i])
                 gdImageSetPixel(self._image,
                                 points_arr[i, 0] + 1, points_arr[i, 1] + 1,
-                                c)
+                                colors[i])
                 gdImageSetPixel(self._image,
                                 points_arr[i, 0] - 1, points_arr[i, 1] - 1,
-                                c)
+                                colors[i])
                 gdImageSetPixel(self._image,
                                 points_arr[i, 0] + 1, points_arr[i, 1] - 1,
-                                c)
+                                colors[i])
                 gdImageSetPixel(self._image,
                                 points_arr[i, 0] - 1, points_arr[i, 1] + 1,
-                                c)
+                                colors[i])
         elif diameter > 2:
             gdImageSetThickness(self._image, line_width)
 
@@ -686,11 +755,11 @@ cdef class Image:
                 gdImageLine(self._image,
                             points_arr[i, 0] - r, points_arr[i, 1] - r,
                             points_arr[i, 0] + r, points_arr[i, 1] + r,
-                            c)
+                            colors[i])
                 gdImageLine(self._image,
                             points_arr[i, 0] - r, points_arr[i, 1] + r,
                             points_arr[i, 0] + r, points_arr[i, 1] - r,
-                            c)
+                            colors[i])
 
             gdImageSetThickness(self._image, 1)
         else:
@@ -742,6 +811,7 @@ cdef class Image:
         cdef cnp.ndarray[int, ndim=2, mode='c'] points_arr
 
         points_arr = asn2array(points, dtype=np.intc)
+
         n = points_arr.shape[0]
 
         if n < 3:
@@ -912,14 +982,129 @@ cdef class Image:
 
             gdImageSetThickness(self._image, line_width)
 
+            # gdImageFilledArc(self._image,
+            #    void gdImageArc(gdImagePtr im, int cx, int cy, int w, int h, int s, int e, int color)
+            # using gdFilledArc, because the gdEdged flag works
+            # but using gdImageArc only works for the outer circle
             gdImageFilledArc(self._image,
                              center[0], center[1],
                              width, height,
                              start, end,
                              self.get_color_index(line_color),
-                             flag)
+                             flag
+                             )
+            # gdImageArc(self._image,
+            #                  center[0], center[1],
+            #                  width, height,
+            #                  start, end,
+            #                  self.get_color_index(line_color),
+            #                  )
 
             gdImageSetThickness(self._image, 1)
+
+    def draw_ellipse(self,
+                     center,
+                     width,
+                     height,
+                     line_color=None,
+                     fill_color=None,
+                     int line_width=1,
+                     ):
+        # void gdImageEllipse(gdImagePtr im, int mx, int my, int w, int h, int c)
+        # void gdImageFilledEllipse (gdImagePtr im, int mx, int my, int w, int h, int c)
+
+        """
+        Draw an ellipse centered at the given point, with the specified
+        width and height in pixels.
+
+        :param center: center of arc
+        :type center: (x,y) tuple or 2-sequence of integers
+
+        :param width: width of ellipse
+        :type width: integer
+
+        :param height: height of ellipse
+        :type height: integer
+
+        :param fill_color=None: the color of the filled portion of the ellipse
+        :type  fill_color=None: color name or index
+
+        :param line_color=None: the color of the outline
+        :type  line_color=None: color name or index
+
+        :param line_width=1: width of line
+        :type line_width: integer
+
+        A circle can be drawn by setting the width and height the same
+        """
+        # filled ellipse
+        if fill_color is not None:
+            gdImageFilledEllipse(self._image,
+                                 center[0], center[1],
+                                 width, height,
+                                 self.get_color_index(fill_color),
+                                 )
+
+        # FIXME: line thickness appears to be broken.
+        if line_color is not None:
+            if line_width != 1:
+                print("WARNING: setting line width for Ellipse may be broken")
+
+            gdImageSetThickness(self._image, line_width)
+
+            gdImageEllipse(self._image,
+                           center[0], center[1],
+                           width, height,
+                           self.get_color_index(line_color),
+                           )
+            gdImageSetThickness(self._image, 1)
+
+
+    def draw_circle(self,
+                    center,
+                    diameter,
+                    line_color=None,
+                    fill_color=None,
+                    int line_width=1,
+                    ):
+        """
+        Draw a circle centered on a point.
+
+        NOTE: this is a simplified call to draw_arc()
+
+        :param center: center of the circle
+        :type center: (x,y) tuple or 2-sequence of integers
+
+        :param diameter: diameter of the circle
+        :type diameter: integer
+
+        :param fill_color=None: the color of the filled portion of the circle
+        :type  fill_color=None: color name or index
+
+        :param line_color=None: the color of the outline
+        :type  line_color=None: color name or index
+
+        :param line_width=1: width of the outline
+        :type line_width: integer
+        """
+        # Using draw_arc, because line thickenss is broken with Ellipse
+        self.draw_arc(center=center,
+                          width=diameter,
+                          height=diameter,
+                          line_color=line_color,
+                          fill_color=fill_color,
+                          line_width=line_width,
+                          start=0, end=360,
+                          draw_wedge=False
+                          )
+        # self.draw_ellipse(center=center,
+        #                   width=diameter,
+        #                   height=diameter,
+        #                   line_color=line_color,
+        #                   fill_color=fill_color,
+        #                   line_width=line_width,
+        #                   )
+
 
     def draw_text(self, text, point, font="medium", color='black', align='lt',
                   background='none'):
@@ -1002,14 +1187,6 @@ cdef class Image:
                       text_bytes,
                       self.get_color_index(color))
 
-        # if line_color is not None:
-        #     gdImageArc(self._image,
-        #                center[0], center[1],
-        #                width, height,
-        #                start, end,
-        #                self.get_color_index(line_color)
-        #                )
-
 
 def from_array(char[:, :] arr not None, *args, **kwargs):
     """
@@ -1032,32 +1209,21 @@ def from_array(char[:, :] arr not None, *args, **kwargs):
 
 
 cdef class Animation:
-    #cdef Image cur_frame
-    #cdef int _cur_delay
-    #cdef Image prev_frame
-    #cdef int base_delay
-    #cdef FILE *_fp
-    #cdef int _has_begun
-    #cdef int _has_closed
-    #cdef int _frames_written
-    #cdef int _global_colormap
-    #cdef object _file_path
+    """
+    Animation class -- creates an animated GIF
+    """
+    # cdef Image cur_frame
+    # cdef int _cur_delay
+    # cdef Image prev_frame
+    # cdef int base_delay
+    # cdef FILE *_fp
+    # cdef int _has_begun
+    # cdef int _has_closed
+    # cdef int _frames_written
+    # cdef int _global_colormap
+    # cdef object _file_path
 
     def __cinit__(self, file_name, int delay=50, int global_colormap=1):
-        """
-        :param file_name: The name/file path of the animation that will be
-                          saved
-        :type file_name: str or PathLike object
-
-        :param delay: the default delay between frames
-        :type delay: int
-
-        :param global_colormap=1: Whether to use a global colormap.
-                                  If 1, the same colormap is used for
-                                  all images in the animation. If 0,
-                                  a new colormap is used for each frame.
-        """
-
         self._fp = NULL
         self.base_delay = delay
         self._has_begun = 0
@@ -1066,14 +1232,13 @@ cdef class Animation:
         self._cur_delay = delay
         self._global_colormap = global_colormap
 
-
-    def __init__(self,  file_name, delay=50, global_colormap=1):
+    def __init__(self, file_name, delay=50, global_colormap=1):
         """
         :param file_name: The name/file path of the animation that will be
                           saved
         :type file_name: path_like e.g. str or pathlib.Path
 
-        :param delay: the default delay between frames
+        :param delay: the default delay between frames in 1/100 sec.
         :type delay: int
 
         :param global_colormap=1: Whether to use a global colormap.
@@ -1099,7 +1264,7 @@ cdef class Animation:
             fclose(self._fp)
             self._fp = NULL
 
-    def begin_anim(self, Image first, int loops=0):
+    def begin(self, Image first, int loops=0):
         """
         Begins the animation. This creates the file pointer and infers size and
         palette information from the initial Image
@@ -1108,7 +1273,7 @@ cdef class Animation:
                       Also determines palette and size
         :type first: Image
 
-        :param loops: Specifies the looping behavior of the animation.
+        :param loops=0: Specifies the looping behavior of the animation.
                       (0 -> loop, -1 -> no loop, n > 0 -> loop n times)
         :type loops: int
         """
@@ -1129,6 +1294,9 @@ cdef class Animation:
                             loops)
 
         self._has_begun = 1
+
+    # create an alias to the old name
+    begin_anim = begin
 
     def add_frame(self, Image image, int delay=-1):
         """
@@ -1185,9 +1353,13 @@ cdef class Animation:
 
             self._frames_written += 1
 
-    def close_anim(self):
-        if self._has_begun == 0:
+    def close(self):
+        """
+        close the current animation
 
+        finalizes animation, and closed gif file
+        """
+        if self._has_begun == 0:
             raise RuntimeError("Cannot close animation that hasn't been "
                                "opened (begun)")
 
@@ -1208,6 +1380,9 @@ cdef class Animation:
             self._fp = NULL
 
         self._has_closed = 1
+
+    # keeping the old alias
+    close_anim = close
 
     def reset(self, file_path=None):
         """
@@ -1237,13 +1412,24 @@ cdef class Animation:
 
     @property
     def frames_written(self):
+        """
+        number of animation frames currently written
+        """
         return self._frames_written
 
 
 def animation_from_images(images, file_name, delay=50):
-    a = Animation(file_name, delay)
-    a.begin_anim(images[0])
+    """
+    Create an animation (aniated GIF) from existing images.
 
-    for img in images[1:]:
-        a.add_frame(img)
-    a.close_anim()
+    :param images: iterable of Images with which to create the animation
+
+    """
+    anim = Animation(file_name, delay)
+    images = iter(images)
+
+    anim.begin_anim(next(images))
+
+    for img in images:
+        anim.add_frame(img)
+    anim.close_anim()

@@ -13,7 +13,7 @@ from .py_gd import *
 import sys
 import os
 import ctypes
-__version__ = "2.0.3"
+__version__ = "2.2.0"
 
 print(">>> initalize PY_GD:", os.getcwd())
 
@@ -53,7 +53,7 @@ if sys.platform.startswith('win'):
                            )
     os.environ['PATH'] = libpath + os.pathsep + os.environ['PATH']
 try:
-    from .py_gd import *
+    from .py_gd import *  # noqa: F401
     
 
 except ImportError as err:
