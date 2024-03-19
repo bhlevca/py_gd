@@ -47,10 +47,10 @@ def download(name):
     
     if name.startswith('libgd'):
         cmd = 'curl -L --output {0} https://bitbucket.org/libgd/gd-libgd/downloads/{0}'.format(name)
-    elif name.startswith('libpng-1.6.3'):
+    elif name.startswith('libpng-1.6.40'):
         #raise Exception("you need to download this by hand from sourceforge: http://sourceforge.net/projects/libpng/files/libpng16/1.6.2/libpng-1.6.2.tar.gz/download")
         #http://sourceforge.net/projects/libpng/files/libpng16/1.6.3/libpng-1.6.3.tar.gz
-        cmd = 'curl -L --output {0} http://sourceforge.net/projects/libpng/files/libpng16/1.6.3/libpng-1.6.3.tar.gz'.format(name)
+        cmd = 'curl -L --output {0} http://sourceforge.net/projects/libpng/files/libpng16/1.6.40/libpng-1.6.40.tar.gz'.format(name)
     else:
         raise Exception("I don't know how to download: %s"%name)
     print("downloading:", name)
@@ -146,7 +146,7 @@ def do_it_all(libs):
 if __name__ == "__main__":
 
     ## this libs to download and bulid
-    do_it_all( [ "libpng-1.6.3",
+    do_it_all( [ "libpng-1.6.40",
                  "libgd-2.1.0",
                  ] )
 
