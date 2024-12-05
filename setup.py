@@ -37,7 +37,7 @@ SETUP_PATH = os.path.dirname(os.path.abspath(__file__))
 
 include_dirs = [numpy.get_include()]
 library_dirs = []
-libraries = ['gd', 'libgd']
+libraries = ['libgd', 'gd']  # BH changed order
 compile_args = []
 link_args = []
 
@@ -53,12 +53,13 @@ if sys.platform.startswith('win'):
     # need the library and include for Windows Anaconda... <PREFIX>/Library
     incpath = r'..\vcpkg\installed\x64-windows\include'
     include_dirs.append(os.path.join(sys.prefix, r'Library\include'))
-    include_dirs.append(os.path.join(sys.prefix, incpath))
-    print(" >>**<< INCLUDE PATH: ", os.path.join(sys.prefix, incpath)) 
+    include_dirs.append(os.path.join(SETUP_PATH, incpath))   #BH changed from sys.prefix
+    print(" >>**<< INCLUDE PATH: ", os.path.join(SETUP_PATH, incpath)) #BH changed from sys.prefix
     # dlls go in bin, rather than lib (??)
     libpath = r'..\vcpkg\installed\x64-windows\lib'
     library_dirs.append(os.path.join(sys.prefix, r'Library\lib'))
-    library_dirs.append(os.path.join(sys.prefix, libpath))
+    library_dirs.append(os.path.join(SETUP_PATH, libpath)) #BH changed from sys.prefix
+    print(" >>**<< LIBRARY PATH: ", os.path.join(SETUP_PATH, libpath)) #BH added
        
     compile_args.append('/EHsc')
     link_args.append('/MANIFEST')

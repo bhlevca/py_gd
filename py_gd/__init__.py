@@ -22,7 +22,10 @@ if sys.platform.startswith('win'):
     # On other  systems, logic needs to be added here.
     libpath = os.path.join(os.path.split(sys.executable)[0], "Library", "bin")
     print(">>> LIBPATH:", libpath)
-    libpath = "C:\\MECP\\WebGnome\\vcpkg\\installed\\x64-windows\\bin"
+    #libpath = "D:\\WebGnome\\vcpkg\\installed\\x64-windows\\bin"  #BH changed from C:\\MECP
+    #libpath = "D:\\WebGnome\\vcpkg\\installed\\x64-windows\\lib"  #BH changed from C:\\MECP
+    libpath = r'..\vcpkg\installed\x64-windows\bin'
+
     print(">>> LIBPATH 2:", libpath)
     # UGLY kludge for Windows: load the libgd dll with ctypes so it can be used by the extension
     # import ctypes
