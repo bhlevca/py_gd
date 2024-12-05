@@ -179,18 +179,55 @@ cdef draw_single_dot(gdImagePtr image,
         raise NotImplementedError("only diameters >= 1 are supported.")
 
 
+cdef draw_single_dot(gdImagePtr image,
+                     int x,
+                     int y,
+                     int diameter,
+                     cnp.uint8_t c):
+
+    if diameter == 1:
+        gdImageSetPixel(image, x, y, c)
+    elif diameter == 2:  # draw four pixels
+        gdImageSetPixel(image, x,     y, c)
+        gdImageSetPixel(image, x + 1, y, c)
+        gdImageSetPixel(image, x,     y + 1, c)
+        gdImageSetPixel(image, x + 1, y + 1, c)
+    elif diameter == 3:  # draw five pixels (should be 7)
+        gdImageSetPixel(image, x, y - 1, c)
+        gdImageSetPixel(image, x, y,     c)
+        gdImageSetPixel(image, x, y + 1, c)
+        gdImageSetPixel(image, x - 1, y, c)
+        gdImageSetPixel(image, x + 1, y, c)
+    elif diameter > 3:
+        gdImageFilledArc(image,
+                         x, y,
+                         diameter, diameter,
+                         0, 360,
+                         c, gdArc)
+    else:
+        raise NotImplementedError("only diameters >= 1 are supported.")
+
+
 cdef class Image:
     """
     class wrapper  around a gdImage object
     """
     # cdef readonly unsigned int _width, _height
 
+<<<<<<< HEAD
     cdef gdImagePtr _image
     cdef unsigned char * _buffer_array
 
     cdef list color_names
     cdef dict colors_rgb
     cdef dict colors
+=======
+    #cdef gdImagePtr _image
+    #cdef unsigned char * _buffer_array
+    #cdef list color_names
+    #cdef dict colors_rgb
+    #cdef dict colors
+>>>>>>> origin/develop_phase2
 
     def __cinit__(self, int width, int height, preset_colors='web'):
         # self._width  = width
@@ -1373,6 +1410,7 @@ cdef class Animation:
     """
     Animation class -- creates an animated GIF
     """
+<<<<<<< HEAD
     cdef Image cur_frame
     cdef int _cur_delay
     cdef Image prev_frame
@@ -1383,6 +1421,18 @@ cdef class Animation:
     cdef int _frames_written
     cdef int _global_colormap
     cdef object _file_path
+=======
+    # cdef Image cur_frame
+    # cdef int _cur_delay
+    # cdef Image prev_frame
+    # cdef int base_delay
+    # cdef FILE *_fp
+    # cdef int _has_begun
+    # cdef int _has_closed
+    # cdef int _frames_written
+    # cdef int _global_colormap
+    # cdef object _file_path
+>>>>>>> origin/develop_phase2
 
     def __cinit__(self, file_name, int delay=50, int global_colormap=1):
         self._fp = NULL

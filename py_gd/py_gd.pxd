@@ -126,3 +126,42 @@ cdef extern from "gdfontg.h":
 
 ## synonm
 #cdef int gdPie = gdArc
+<<<<<<< HEAD
+=======
+
+
+cpdef cnp.ndarray[int, ndim=2, mode='c'] asn2array(obj, dtype)
+
+cdef FILE* open_file(file_path) except *
+
+cdef class Image:
+    """
+    class wrapper  around a gdImage object
+    """
+    # cdef readonly unsigned int _width, _height
+
+    cdef gdImagePtr _image
+    cdef unsigned char * _buffer_array
+
+    cdef list color_names
+    cdef dict colors_rgb
+    cdef dict colors
+
+    
+
+cdef class Animation:
+    cdef Image cur_frame
+    cdef int _cur_delay
+    cdef Image prev_frame
+    cdef int base_delay
+    cdef FILE *_fp
+    cdef int _has_begun
+    cdef int _has_closed
+    cdef int _frames_written
+    cdef int _global_colormap
+    cdef object _file_path
+
+
+
+
+>>>>>>> origin/develop_phase2
